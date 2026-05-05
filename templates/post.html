@@ -1,0 +1,14 @@
+{{define "title"}}{{.Post.Title}}{{end}}
+{{define "content"}}
+<article>
+<header class="post-header">
+<p class="kicker"><a href="/{{.Post.Section.Slug}}/">{{.Post.Section.Title}}</a></p>
+<h1>{{.Post.Title}}</h1>
+{{if .Post.Summary}}<p class="subtitle">{{.Post.Summary}}</p>{{end}}
+<p class="date">{{.Post.DateStr}}</p>
+</header>
+<div class="post-body">
+{{.Post.HTML}}
+</div>
+</article>
+{{end}}

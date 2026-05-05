@@ -1,0 +1,19 @@
+{{define "title"}}{{.Section.Title}}{{end}}
+{{define "content"}}
+<header class="section-header">
+<h1>{{.Section.Title}}</h1>
+<p class="section-desc">{{.Section.Desc}}</p>
+<p class="feed-link"><a href="/{{.Section.Slug}}/feed.xml">Subscribe via RSS</a></p>
+</header>
+{{if .Posts}}
+<ul class="post-list">
+{{range .Posts}}<li><a class="post-card" href="{{.URL}}">
+<h3 class="post-card-title">{{.Title}}</h3>
+{{if .Summary}}<p class="post-card-summary">{{.Summary}}</p>{{end}}
+<p class="post-card-date">{{.DateStr}}</p>
+</a></li>
+{{end}}</ul>
+{{else}}
+<p class="empty">Nothing here yet.</p>
+{{end}}
+{{end}}
