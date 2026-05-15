@@ -5,24 +5,24 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{{template "title" .}} — {{.Site.Title}}</title>
 <meta name="description" content="{{.Site.Desc}}">
-<link rel="preload" href="/static/fonts/plex-regular.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="/static/style.css">
-<link rel="alternate" type="application/rss+xml" href="/feed.xml" title="{{.Site.Title}}">
+<link rel="preload" href="{{.Site.BasePath}}/static/fonts/plex-regular.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="{{.Site.BasePath}}/static/style.css">
+<link rel="alternate" type="application/rss+xml" href="{{.Site.BasePath}}/feed.xml" title="{{.Site.Title}}">
 </head>
 <body>
 <div class="wrap">
 <header class="site-header">
-<a href="/" class="brand">{{.Site.Title}}</a>
+<a href="{{.Site.BasePath}}/" class="brand">{{.Site.Title}}</a>
 <nav>
-{{range .Site.Sections}}<a href="/{{.Slug}}/">{{.Title}}</a>
-{{end}}<a href="/about.html">About</a>
+{{range .Site.Sections}}<a href="{{$.Site.BasePath}}/{{.Slug}}/">{{.Title}}</a>
+{{end}}<a href="{{.Site.BasePath}}/about.html">About</a>
 </nav>
 </header>
 <main>
 {{template "content" .}}
 </main>
 <footer>
-<p><a href="mailto:{{.Site.Email}}">{{.Site.Email}}</a> · <a href="/feed.xml">RSS</a></p>
+<p><a href="mailto:{{.Site.Email}}">{{.Site.Email}}</a> · <a href="{{.Site.BasePath}}/feed.xml">RSS</a></p>
 </footer>
 </div>
 </body>

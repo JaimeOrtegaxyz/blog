@@ -32,6 +32,8 @@ const (
 	siteDesc  = "Musings on past, present, and future."
 )
 
+var basePath string
+
 type Section struct {
 	Slug, Title, Desc string
 }
@@ -52,22 +54,23 @@ type Post struct {
 	HTML    template.HTML
 }
 
-func (p Post) URL() string     { return fmt.Sprintf("/%s/%s.html", p.Section.Slug, p.Slug) }
+func (p Post) URL() string     { return fmt.Sprintf("%s/%s/%s.html", basePath, p.Section.Slug, p.Slug) }
 func (p Post) AbsURL() string  { return siteURL + p.URL() }
 func (p Post) RFC822() string  { return p.Date.Format(time.RFC1123Z) }
 func (p Post) DateStr() string { return p.Date.Format("2006-01-02") }
 
 type Site struct {
-	Title, URL, Email, Desc string
-	Sections                []Section
+	Title, URL, Email, Desc, BasePath string
+	Sections                          []Section
 }
 
 func site() Site {
-	return Site{Title: siteTitle, URL: siteURL, Email: siteEmail, Desc: siteDesc, Sections: sections}
+	return Site{Title: siteTitle, URL: siteURL, Email: siteEmail, Desc: siteDesc, BasePath: basePath, Sections: sections}
 }
 
 func main() {
 	start := time.Now()
+	basePath = os.Getenv("BLOG_BASE_PATH")
 
 	md := goldmark.New(
 		goldmark.WithExtensions(extension.GFM),
@@ -101,7 +104,7 @@ func main() {
 		})
 
 		renderXML(xmlT, filepath.Join(secDir, "feed.xml"),
-			feedData(sec.Title+" — "+siteTitle, sec.Desc, "/"+sec.Slug+"/feed.xml", ps))
+			feedData(sec.Title+" — "+siteTitle, sec.Desc, basePath+"/"+sec.Slug+"/feed.xml", ps))
 
 		for _, p := range ps {
 			renderHTML("post.html", filepath.Join(secDir, p.Slug+".html"), map[string]any{
@@ -112,7 +115,7 @@ func main() {
 	}
 
 	renderXML(xmlT, filepath.Join(distDir, "feed.xml"),
-		feedData(siteTitle, siteDesc, "/feed.xml", all))
+		feedData(siteTitle, siteDesc, basePath+"/feed.xml", all))
 
 	renderHTML("about.html", filepath.Join(distDir, "about.html"), map[string]any{
 		"Site": site(),
@@ -298,7 +301,7 @@ func findWallpaper() string {
 	for _, ext := range []string{".webp", ".avif", ".jpg", ".jpeg", ".png"} {
 		path := filepath.Join(staticDir, "wallpaper"+ext)
 		if _, err := os.Stat(path); err == nil {
-			return "/" + filepath.ToSlash(path)
+			return basePath + "/" + filepath.ToSlash(path)
 		}
 	}
 	return ""
