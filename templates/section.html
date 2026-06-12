@@ -3,7 +3,7 @@
 <header class="section-header">
 <h1>{{.Section.Title}}</h1>
 <p class="section-desc">{{.Section.Desc}}</p>
-<p class="feed-link"><a href="/{{.Section.Slug}}/feed.xml">Subscribe via RSS</a></p>
+<p class="feed-link"><a href="{{.Site.BasePath}}/{{.Section.Slug}}/feed.xml">Subscribe via RSS</a></p>
 </header>
 {{if .Posts}}
 <ul class="post-list">

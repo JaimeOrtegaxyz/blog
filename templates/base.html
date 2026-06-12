@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>{{template "title" .}} — {{.Site.Title}}</title>
+<title>{{block "fulltitle" .}}{{template "title" .}} — {{.Site.Title}}{{end}}</title>
 <meta name="description" content="{{.Site.Desc}}">
 <link rel="preload" href="{{.Site.BasePath}}/static/fonts/plex-regular.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="{{.Site.BasePath}}/static/style.css">
 <link rel="alternate" type="application/rss+xml" href="{{.Site.BasePath}}/feed.xml" title="{{.Site.Title}}">
 </head>
 <body>
-<div class="wrap">
+<div class="wrap{{if .Wide}} wrap-art{{end}}">
 <header class="site-header">
 <a href="{{.Site.BasePath}}/" class="brand">{{.Site.Title}}</a>
 <nav>

@@ -99,7 +99,10 @@ verify it mechanically.
    `/about.html`) must each transfer under ~30KB total including
    HTML, CSS, and font. The home page is exempted *only* because of
    the wallpaper image; even then, total weight should stay under
-   ~250KB.
+   ~250KB. Posts that include art (see "Art posts" below) are
+   exempted the same way the home page is: each image is one
+   hand-compressed file (webp / avif / jpg) under 200KB, and the
+   page's budget excluding images still holds.
 
 7. **Total `dist/` size excluding wallpaper stays in the low
    hundreds of KB for a small site.**
@@ -116,7 +119,8 @@ verify it mechanically.
 9. **At most one CSS request, one font request, zero JS requests
    per page.**
    Inner pages: 1 HTML + 1 CSS + 1 font + 0 JS + 0 third-party.
-   Home: same plus 1 wallpaper image.
+   Home: same plus 1 wallpaper image. Art posts: same plus N
+   same-origin images, each within the 200KB budget above.
 
 10. **Zero JavaScript by default.**
     No `<script>` tag should appear in any rendered HTML unless it
@@ -269,6 +273,8 @@ A built page is composed of:
 - (Home only.) Five inlined SVG icons (~5KB combined).
 - (Home only.) Five `<link rel="prefetch">` tags so subsequent
   navigation has no network round-trip.
+- (Art posts only.) N self-hosted images from `static/art/<slug>/`,
+  each one hand-compressed file under 200KB.
 
 That is the whole network footprint. Nothing else loads.
 
@@ -337,6 +343,49 @@ it as the body's background-image. If no wallpaper file is present,
 the body falls back to the solid background colour from the CSS
 variables. There is no broken-image icon, no 404, no console error
 in either case.
+
+---
+
+## Art posts
+
+A post may carry artwork beside its text, in the manner of an
+illustrated magazine: the image pins to the left half of the viewport
+while its stretch of text scrolls on the right, and the next image
+takes over when its stretch arrives.
+
+The mechanic is CSS only, and must stay that way. At build time the
+SSG (`panelize()` in `cmd/build/main.go`) wraps each image paragraph
+plus the text that follows it into a `<section class="panel">`;
+`position: sticky` does the pinning and the handoff. No
+IntersectionObserver, no scroll listener, no scrollytelling library.
+If a future change to this feature requires a `<script>` tag, the
+change is wrong.
+
+Authoring rules:
+
+- An image is a panel boundary only when the markdown paragraph is
+  *exactly one image* (`![alt](/static/art/<slug>/file.jpg)` on its
+  own line). Images inline within a sentence are left untouched.
+- Text before the first image joins the first image's panel, so the
+  artwork is on screen from the top of the page — never an empty
+  rail beside the opening paragraphs.
+- Image files live in `static/art/<slug>/`. Self-hosted, like
+  everything else. No image CDN, no srcset pipeline, no on-demand
+  resizing.
+- Each image is one hand-compressed file (webp / avif / jpg) under
+  200KB. Compress before committing; the build will not do it for
+  you, deliberately.
+- No new front matter. Whether a post has art is inferred from its
+  body, not declared.
+- Every art panel is at least 1.5 viewports tall (`min-height` in
+  CSS), so each image pins for at least half a viewport before
+  handing off. Beyond that floor, sticky travel is the text's
+  length, not a timer: longer stretches pin longer. Give each image
+  enough words to be worth pinning for.
+
+Posts without image paragraphs render exactly as before — centered
+single column, byte-identical output. On narrow screens art posts
+collapse to a single column with images inline, in order.
 
 ---
 
@@ -443,7 +492,9 @@ checklist when auditing.
 
 - [ ] `time make build` (after compilation) takes more than 100ms
   for the SSG run itself.
-- [ ] An inner page transfer size exceeds 30KB.
+- [ ] An inner page transfer size exceeds 30KB (excluding art-post
+  images that individually respect the 200KB budget).
+- [ ] An image under `static/art/` exceeds 200KB.
 - [ ] The home page transfer size exceeds 250KB.
 - [ ] The CSS file exceeds ~12KB.
 - [ ] More than one font file is downloaded per page.

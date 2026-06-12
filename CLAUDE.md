@@ -19,12 +19,13 @@ measure, don't guess; don't soften the verdict.
 
 - `cmd/build/main.go` — the entire SSG, ~300 lines, one direct dep
   (goldmark).
-- `templates/` — HTML templates. `home.html` is standalone (the
-  desktop landing); every other page extends `base.html`.
+- `templates/` — HTML templates. Every page extends `base.html`
+  (including `home.html`, the landing: intro + recent posts per
+  section).
 - `content/<section>/*.md` — posts. Front matter is `title`, `date`,
   optional `summary`. Filename = slug = URL path component.
-- `static/` — `style.css`, `fonts/plex-*.woff2`, optional
-  `wallpaper.<ext>` (webp / avif / jpg / jpeg / png).
+- `static/` — `style.css`, `fonts/plex-*.woff2`, and `art/<slug>/`
+  images for art posts (see "Art posts" in the spec).
 - `dist/` — build output, gitignored.
 
 ## Common operations
@@ -33,9 +34,10 @@ measure, don't guess; don't soften the verdict.
 - `make serve` — build and serve on port 8000 via `python3 -m
   http.server`.
 - New post: drop `content/<section>/<slug>.md` with front matter.
-- New section: edit the `sections` slice in `cmd/build/main.go`,
-  `mkdir content/<name>/`, add a matching icon `<li>` block in
-  `templates/home.html`.
+- New section: edit the `sections` slice in `cmd/build/main.go` and
+  `mkdir content/<name>/`. The home page and nav pick it up
+  automatically. Set the section's `Stream` flag to render its index
+  as a continuous stream (like Notes) instead of a card list.
 
 ## Voice when responding to feature requests
 

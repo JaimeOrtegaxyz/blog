@@ -1,11 +1,13 @@
 {{define "title"}}{{.Post.Title}}{{end}}
 {{define "content"}}
-<article>
+<article{{if .Post.HasArt}} class="has-art"{{end}}>
 <header class="post-header">
-<p class="kicker"><a href="/{{.Post.Section.Slug}}/">{{.Post.Section.Title}}</a></p>
+<div>
+<p class="kicker"><a href="{{.Site.BasePath}}/{{.Post.Section.Slug}}/">{{.Post.Section.Title}}</a></p>
 <h1>{{.Post.Title}}</h1>
 {{if .Post.Summary}}<p class="subtitle">{{.Post.Summary}}</p>{{end}}
 <p class="date">{{.Post.DateStr}}</p>
+</div>
 </header>
 <div class="post-body">
 {{.Post.HTML}}

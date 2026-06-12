@@ -10,6 +10,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 	texttemplate "text/template"
@@ -36,13 +37,14 @@ var basePath string
 
 type Section struct {
 	Slug, Title, Desc string
+	Stream            bool // index renders full posts end-to-end instead of a card list
 }
 
 var sections = []Section{
-	{"thoughts", "Thoughts", "Long-form essays."},
-	{"notes", "Notes", "Short takes and observations."},
-	{"projects", "Projects", "Things I've built."},
-	{"reading", "Reading", "Books and articles."},
+	{"thoughts", "Thoughts", "Long-form essays.", false},
+	{"notes", "Notes", "Short takes and observations.", true},
+	{"projects", "Projects", "Things I've built.", false},
+	{"reading", "Reading", "Books and articles.", false},
 }
 
 type Post struct {
@@ -52,6 +54,7 @@ type Post struct {
 	Date    time.Time
 	Summary string
 	HTML    template.HTML
+	HasArt  bool
 }
 
 func (p Post) URL() string     { return fmt.Sprintf("%s/%s/%s.html", basePath, p.Section.Slug, p.Slug) }
@@ -86,10 +89,18 @@ func main() {
 			ParseGlob(filepath.Join(templatesDir, "*.xml")),
 	)
 
-	renderStandalone("home.html", filepath.Join(distDir, "index.html"), map[string]any{
+	recent := map[string][]Post{}
+	for _, sec := range sections {
+		ps := bySection[sec.Slug]
+		if len(ps) > 3 {
+			ps = ps[:3]
+		}
+		recent[sec.Slug] = ps
+	}
+	renderHTML("home.html", filepath.Join(distDir, "index.html"), map[string]any{
 		"Site":      site(),
 		"Sections":  sections,
-		"Wallpaper": findWallpaper(),
+		"BySection": recent,
 	})
 
 	for _, sec := range sections {
@@ -97,11 +108,17 @@ func main() {
 		secDir := filepath.Join(distDir, sec.Slug)
 		mustMkdir(secDir)
 
-		renderHTML("section.html", filepath.Join(secDir, "index.html"), map[string]any{
+		secTemplate := "section.html"
+		secData := map[string]any{
 			"Site":    site(),
 			"Section": sec,
 			"Posts":   ps,
-		})
+		}
+		if sec.Stream {
+			secTemplate = "stream.html"
+			secData["Wide"] = true
+		}
+		renderHTML(secTemplate, filepath.Join(secDir, "index.html"), secData)
 
 		renderXML(xmlT, filepath.Join(secDir, "feed.xml"),
 			feedData(sec.Title+" — "+siteTitle, sec.Desc, basePath+"/"+sec.Slug+"/feed.xml", ps))
@@ -110,6 +127,7 @@ func main() {
 			renderHTML("post.html", filepath.Join(secDir, p.Slug+".html"), map[string]any{
 				"Site": site(),
 				"Post": p,
+				"Wide": p.HasArt,
 			})
 		}
 	}
@@ -187,14 +205,55 @@ func parsePost(path string, sec Section, md goldmark.Markdown) (Post, error) {
 	if err := md.Convert(body, &buf); err != nil {
 		return Post{}, err
 	}
+	html, hasArt := panelize(buf.String())
 	return Post{
 		Section: sec,
 		Slug:    strings.TrimSuffix(filepath.Base(path), ".md"),
 		Title:   fm["title"],
 		Date:    date,
 		Summary: fm["summary"],
-		HTML:    template.HTML(buf.String()),
+		HTML:    template.HTML(html),
+		HasArt:  hasArt,
 	}, nil
+}
+
+// imgPara matches a paragraph that is exactly one image — the panel boundary.
+// Inline images inside a text paragraph are left alone.
+var imgPara = regexp.MustCompile(`<p><img [^>]*></p>`)
+
+// panelize prefixes the base path onto root-absolute image srcs, then wraps
+// each image-only paragraph plus the text that follows it into a
+// <section class="panel"> so CSS sticky can pin the image beside its chunk.
+// Text before the first image joins the first panel, so the artwork is on
+// screen from the top of the page rather than beside an empty rail.
+// Posts without image paragraphs pass through untouched.
+func panelize(html string) (string, bool) {
+	if basePath != "" {
+		html = strings.ReplaceAll(html, ` src="/`, ` src="`+basePath+`/`)
+	}
+	locs := imgPara.FindAllStringIndex(html, -1)
+	if locs == nil {
+		return html, false
+	}
+	var b strings.Builder
+	lead := strings.TrimSpace(html[:locs[0][0]])
+	for i, loc := range locs {
+		end := len(html)
+		if i+1 < len(locs) {
+			end = locs[i+1][0]
+		}
+		img := strings.TrimSuffix(strings.TrimPrefix(html[loc[0]:loc[1]], "<p>"), "</p>")
+		b.WriteString(`<section class="panel panel-has-art"><figure class="panel-art">`)
+		b.WriteString(img)
+		b.WriteString(`</figure><div class="panel-text">`)
+		if i == 0 && lead != "" {
+			b.WriteString(lead)
+			b.WriteString("\n")
+		}
+		b.WriteString(strings.TrimSpace(html[loc[1]:end]))
+		b.WriteString("</div></section>\n")
+	}
+	return b.String(), true
 }
 
 func splitFrontMatter(raw []byte) (map[string]string, []byte, error) {
@@ -282,29 +341,6 @@ func renderHTML(page, out string, data any) {
 	if err := t.ExecuteTemplate(f, "base", data); err != nil {
 		log.Fatalf("render %s: %v", out, err)
 	}
-}
-
-func renderStandalone(page, out string, data any) {
-	t := template.Must(template.ParseFiles(filepath.Join(templatesDir, page)))
-	mustMkdir(filepath.Dir(out))
-	f, err := os.Create(out)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer f.Close()
-	if err := t.Execute(f, data); err != nil {
-		log.Fatalf("render %s: %v", out, err)
-	}
-}
-
-func findWallpaper() string {
-	for _, ext := range []string{".webp", ".avif", ".jpg", ".jpeg", ".png"} {
-		path := filepath.Join(staticDir, "wallpaper"+ext)
-		if _, err := os.Stat(path); err == nil {
-			return basePath + "/" + filepath.ToSlash(path)
-		}
-	}
-	return ""
 }
 
 func renderXML(t *texttemplate.Template, out string, data any) {

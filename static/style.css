@@ -3,14 +3,14 @@
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: url('/static/fonts/plex-regular.woff2') format('woff2');
+  src: url('fonts/plex-regular.woff2') format('woff2');
 }
 @font-face {
   font-family: 'IBM Plex Mono';
   font-style: italic;
   font-weight: 400;
   font-display: swap;
-  src: url('/static/fonts/plex-italic.woff2') format('woff2');
+  src: url('fonts/plex-italic.woff2') format('woff2');
 }
 
 :root {
@@ -114,7 +114,7 @@ article { padding-bottom: 6rem; }
 .kicker a:hover { color: var(--fg); }
 .post-header h1 { font-size: 2.25rem; margin: 0 0 0.5rem; line-height: 1.15; }
 .post-header .subtitle { font-style: italic; color: var(--muted); font-size: 1.1rem; margin: 0 0 1.25rem; line-height: 1.5; }
-.post-header .date { color: var(--muted); font-size: 0.85rem; }
+.post-header .date { color: var(--muted); font-size: 0.85rem; margin: 0; }
 
 .post-body p { margin: 1rem 0; line-height: 1.7; }
 .post-body h1 { font-size: 1.75rem; margin: 2.5rem 0 1rem; }
@@ -147,6 +147,136 @@ article { padding-bottom: 6rem; }
 .post-body pre code { background: transparent; padding: 0; border-radius: 0; font-size: inherit; }
 .post-body img { max-width: 100%; height: auto; border-radius: var(--radius); margin: 1.25rem 0; }
 
+/* Art posts: split-screen panels. Each image-only markdown paragraph becomes
+   a <section class="panel"> with the image sticky in the left half while its
+   text chunk scrolls on the right. Pure CSS — the handoff to the next image
+   is position: sticky doing its job, no JavaScript. */
+.wrap-art { max-width: none; padding: 0 0 4rem; }
+.wrap-art .site-header { margin-bottom: 0; padding-top: 1.5rem; padding-bottom: 1.5rem; }
+.wrap-art .site-header,
+.wrap-art footer {
+  max-width: var(--measure);
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+}
+
+/* The article itself is the grid; header and panels dissolve into it
+   (display: contents) so the first image can span the header row — the
+   image side is full-bleed from the very top, beside the title block. */
+.has-art { display: grid; grid-template-columns: 5fr 6fr; position: relative; view-timeline: --section block; }
+
+/* Scroll progress on the seam: a dotted track between image and text, and a
+   dot that rides down the viewport as you read through the section. Driven
+   by the section's own scroll timeline — pure CSS, no JavaScript. Browsers
+   without animation-timeline park the dot at the section top. */
+.has-art::before {
+  content: "";
+  position: absolute;
+  left: calc(100% * 5 / 11);
+  top: 0;
+  bottom: 0;
+  border-left: 1px dotted var(--border);
+  transform: translateX(-50%);
+  z-index: 1;
+}
+.has-art::after {
+  content: "";
+  position: absolute;
+  left: calc(100% * 5 / 11);
+  top: 0;
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 50%;
+  background: var(--fg);
+  transform: translateX(-50%);
+  z-index: 1;
+  animation: dot-ride linear both;
+  animation-timeline: --section;
+  animation-range: contain;
+}
+@keyframes dot-ride {
+  from { top: 0; }
+  to { top: calc(100% - 0.75rem); }
+}
+.has-art .post-body, .panel { display: contents; }
+.has-art .post-header { grid-column: 2; grid-row: 1; margin-bottom: 0; }
+.has-art .post-header > div {
+  background: var(--secondary);
+  padding: 2rem 1.5rem;
+}
+.has-art .post-header > div > * { max-width: 38rem; }
+.has-art .post-body .panel:first-child .panel-art { grid-row: 1 / span 2; }
+
+/* Guarantee sticky travel: every art panel is at least 1.5 viewports tall,
+   so its image pins for at least half a viewport before handing off. Longer
+   text extends the pin naturally. */
+.panel-has-art .panel-text { min-height: 150dvh; }
+.panel-art {
+  grid-column: 1;
+  position: sticky;
+  top: 0;
+  align-self: start;
+  height: 100dvh;
+  margin: 0;
+  overflow: hidden;
+}
+/* Fill the whole pane, cropping top/bottom or sides as needed — the image
+   side never shows background. */
+.panel-art img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  margin: 0;
+  border-radius: 0;
+}
+.panel-text {
+  grid-column: 2;
+  max-width: 38rem;
+  min-width: 0;
+  padding: 0 1.5rem;
+}
+
+/* Note stream: a Stream section's index renders the notes themselves,
+   end-to-end. Every second note mirrors — art right, text left — so the
+   scroll alternates like facing pages. Pure nth-of-type, no markup. */
+.stream .post-header h1 a { text-decoration: none; }
+.stream .post-header h1 a:hover { color: var(--muted); }
+.stream article + article { border-top: 1px solid var(--border); }
+.stream article.has-art { padding-bottom: 0; }
+.stream article:not(.has-art) {
+  max-width: var(--measure);
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+}
+.stream article.has-art:nth-of-type(even) { grid-template-columns: 6fr 5fr; }
+.stream article.has-art:nth-of-type(even)::before,
+.stream article.has-art:nth-of-type(even)::after { left: calc(100% * 6 / 11); }
+.stream article:nth-of-type(even) .post-header { grid-column: 1; }
+.stream article:nth-of-type(even) .panel-art { grid-column: 2; }
+.stream article:nth-of-type(even) .panel-text {
+  grid-column: 1;
+  justify-self: end;
+  width: 100%;
+}
+
+@media (max-width: 768px) {
+  .wrap-art { padding-left: 1.25rem; padding-right: 1.25rem; }
+  .wrap-art .site-header, .wrap-art footer { padding-left: 0; padding-right: 0; }
+  .has-art, .has-art .post-body { display: block; }
+  .has-art::before, .has-art::after { display: none; }
+  .has-art .post-header > div { padding: 1.25rem; }
+  .panel { display: block; min-height: 0; }
+  .panel-has-art .panel-text { min-height: 0; }
+  .panel-art { position: static; height: auto; padding: 0; margin: 1.25rem 0; }
+  .panel-art img { height: auto; border-radius: var(--radius); }
+  .panel-text { max-width: none; padding: 0; }
+}
+
 footer {
   margin-top: 5rem;
   padding-top: 2rem;
@@ -162,81 +292,6 @@ footer p { margin: 0; }
   .wrap { padding: 2.5rem 1.25rem; }
   .site-header { margin-bottom: 2.5rem; }
   .post-header h1 { font-size: 1.75rem; }
-}
-
-/* Desktop landing */
-.visually-hidden {
-  position: absolute;
-  width: 1px; height: 1px;
-  padding: 0; margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
-}
-
-.desktop {
-  margin: 0;
-  min-height: 100vh;
-  background-color: var(--bg);
-  background-size: cover;
-  background-position: center;
-  background-attachment: fixed;
-  background-repeat: no-repeat;
-  padding: 3rem 2rem;
-}
-
-.desktop-icons {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  width: max-content;
-}
-
-.desktop-icon {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 0.4rem;
-  padding: 0.6rem 0.5rem;
-  width: 92px;
-  border-radius: 6px;
-  text-decoration: none;
-  color: var(--fg);
-  transition: background-color 120ms ease;
-}
-.desktop-icon:hover { background: rgba(255, 255, 255, 0.14); color: var(--fg); }
-@media (prefers-color-scheme: dark) {
-  .desktop-icon:hover { background: rgba(255, 255, 255, 0.08); }
-}
-.desktop-icon:focus-visible {
-  outline: 2px solid currentColor;
-  outline-offset: 3px;
-}
-
-.desktop-icon-glyph {
-  width: 40px;
-  height: 40px;
-  fill: none;
-  stroke: currentColor;
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.25));
-}
-
-.desktop-icon-label {
-  font-size: 0.85rem;
-  text-align: center;
-  line-height: 1.2;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
-}
-
-@media (max-width: 480px) {
-  .desktop { padding: 1.5rem 1rem; }
-  .desktop-icon { width: 80px; }
-  .desktop-icon-glyph { width: 36px; height: 36px; }
 }
 
 /* Cross-document view transitions: browser holds the old page on screen
@@ -258,10 +313,4 @@ footer p { margin: 0; }
     to { opacity: 1; }
   }
   .wrap { animation: fade-in 220ms ease-out; }
-  .desktop-icons li { animation: fade-in 260ms ease-out backwards; }
-  .desktop-icons li:nth-child(1) { animation-delay: 0ms; }
-  .desktop-icons li:nth-child(2) { animation-delay: 60ms; }
-  .desktop-icons li:nth-child(3) { animation-delay: 120ms; }
-  .desktop-icons li:nth-child(4) { animation-delay: 180ms; }
-  .desktop-icons li:nth-child(5) { animation-delay: 240ms; }
 }

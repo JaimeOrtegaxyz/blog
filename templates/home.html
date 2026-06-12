@@ -1,77 +1,22 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>{{.Site.Title}}</title>
-<meta name="description" content="{{.Site.Desc}}">
-<link rel="preload" href="{{.Site.BasePath}}/static/fonts/plex-regular.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="{{.Site.BasePath}}/static/style.css">
-<link rel="alternate" type="application/rss+xml" href="{{.Site.BasePath}}/feed.xml" title="{{.Site.Title}}">
-<link rel="prefetch" href="{{.Site.BasePath}}/thoughts/">
-<link rel="prefetch" href="{{.Site.BasePath}}/notes/">
-<link rel="prefetch" href="{{.Site.BasePath}}/projects/">
-<link rel="prefetch" href="{{.Site.BasePath}}/reading/">
-<link rel="prefetch" href="{{.Site.BasePath}}/about.html">
-{{if .Wallpaper}}<style>.desktop { background-image: url('{{.Wallpaper}}'); }</style>{{end}}
-</head>
-<body class="desktop">
-<h1 class="visually-hidden">{{.Site.Title}}</h1>
-<ul class="desktop-icons">
-
-<li><a class="desktop-icon" href="{{.Site.BasePath}}/thoughts/">
-<svg class="desktop-icon-glyph" viewBox="0 0 32 32" aria-hidden="true">
-<path d="M6 8 Q6 4 10 4 L22 4 Q26 4 26 8 L26 16 Q26 20 22 20 L14 20 L9 25 L10 20 Q6 20 6 16 Z"
-      fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
-<circle cx="12" cy="12" r="0.8" fill="currentColor"/>
-<circle cx="16" cy="12" r="0.8" fill="currentColor"/>
-<circle cx="20" cy="12" r="0.8" fill="currentColor"/>
-</svg>
-<span class="desktop-icon-label">Thoughts</span>
+{{define "fulltitle"}}{{.Site.Title}}{{end}}
+{{define "content"}}
+<section class="intro">
+<h1>{{.Site.Title}}</h1>
+<p>{{.Site.Desc}}</p>
+</section>
+{{range .Sections}}<section class="section-block">
+<div class="section-block-head">
+<h2><a href="{{$.Site.BasePath}}/{{.Slug}}/">{{.Title}}</a></h2>
+<a class="more" href="{{$.Site.BasePath}}/{{.Slug}}/">more →</a>
+</div>
+<p class="section-desc">{{.Desc}}</p>
+{{with index $.BySection .Slug}}<ul class="post-list">
+{{range .}}<li><a class="post-card" href="{{.URL}}">
+<h3 class="post-card-title">{{.Title}}</h3>
+{{if .Summary}}<p class="post-card-summary">{{.Summary}}</p>{{end}}
+<p class="post-card-date">{{.DateStr}}</p>
 </a></li>
-
-<li><a class="desktop-icon" href="{{.Site.BasePath}}/notes/">
-<svg class="desktop-icon-glyph" viewBox="0 0 32 32" aria-hidden="true">
-<rect x="7" y="4" width="18" height="24" rx="2"
-      fill="none" stroke="currentColor" stroke-width="1.5"/>
-<line x1="11" y1="10" x2="21" y2="10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-<line x1="11" y1="15" x2="21" y2="15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-<line x1="11" y1="20" x2="21" y2="20" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-<line x1="11" y1="25" x2="17" y2="25" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-</svg>
-<span class="desktop-icon-label">Notes</span>
-</a></li>
-
-<li><a class="desktop-icon" href="{{.Site.BasePath}}/projects/">
-<svg class="desktop-icon-glyph" viewBox="0 0 32 32" aria-hidden="true">
-<polyline points="11,9 4,16 11,23"
-          fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
-<polyline points="21,9 28,16 21,23"
-          fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
-<line x1="18" y1="6" x2="14" y2="26"
-      stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-</svg>
-<span class="desktop-icon-label">Projects</span>
-</a></li>
-
-<li><a class="desktop-icon" href="{{.Site.BasePath}}/reading/">
-<svg class="desktop-icon-glyph" viewBox="0 0 32 32" aria-hidden="true">
-<path d="M16 9 Q12 6 4 7 L4 25 Q12 24 16 27 Q20 24 28 25 L28 7 Q20 6 16 9 Z"
-      fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
-<line x1="16" y1="9" x2="16" y2="27" stroke="currentColor" stroke-width="1.5"/>
-</svg>
-<span class="desktop-icon-label">Reading</span>
-</a></li>
-
-<li><a class="desktop-icon" href="{{.Site.BasePath}}/about.html">
-<svg class="desktop-icon-glyph" viewBox="0 0 32 32" aria-hidden="true">
-<circle cx="16" cy="11" r="5" fill="none" stroke="currentColor" stroke-width="1.5"/>
-<path d="M5 28 Q5 19 16 19 Q27 19 27 28"
-      fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-</svg>
-<span class="desktop-icon-label">About</span>
-</a></li>
-
-</ul>
-</body>
-</html>
+{{end}}</ul>
+{{else}}<p class="empty">Nothing here yet.</p>
+{{end}}</section>
+{{end}}{{end}}
