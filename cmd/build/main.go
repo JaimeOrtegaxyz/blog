@@ -37,14 +37,13 @@ var basePath string
 
 type Section struct {
 	Slug, Title, Desc string
-	Stream            bool // index renders full posts end-to-end instead of a card list
 }
 
 var sections = []Section{
-	{"thoughts", "Thoughts", "Long-form essays.", false},
-	{"notes", "Notes", "Short takes and observations.", true},
-	{"projects", "Projects", "Things I've built.", false},
-	{"reading", "Reading", "Books and articles.", false},
+	{"thoughts", "Thoughts", "Long-form essays."},
+	{"notes", "Notes", "Short takes and observations."},
+	{"projects", "Projects", "Things I've built."},
+	{"reading", "Reading", "Books and articles."},
 }
 
 type Post struct {
@@ -108,17 +107,11 @@ func main() {
 		secDir := filepath.Join(distDir, sec.Slug)
 		mustMkdir(secDir)
 
-		secTemplate := "section.html"
-		secData := map[string]any{
+		renderHTML("section.html", filepath.Join(secDir, "index.html"), map[string]any{
 			"Site":    site(),
 			"Section": sec,
 			"Posts":   ps,
-		}
-		if sec.Stream {
-			secTemplate = "stream.html"
-			secData["Wide"] = true
-		}
-		renderHTML(secTemplate, filepath.Join(secDir, "index.html"), secData)
+		})
 
 		renderXML(xmlT, filepath.Join(secDir, "feed.xml"),
 			feedData(sec.Title+" — "+siteTitle, sec.Desc, basePath+"/"+sec.Slug+"/feed.xml", ps))

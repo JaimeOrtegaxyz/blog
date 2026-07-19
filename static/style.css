@@ -45,7 +45,7 @@ body {
   background: var(--bg);
 }
 
-a { color: inherit; text-decoration: underline; text-underline-offset: 4px; transition: color 150ms ease; }
+a { color: inherit; text-decoration: underline; text-underline-offset: 4px; }
 a:hover { color: var(--muted); }
 
 .wrap {
@@ -91,7 +91,6 @@ h3 { font-size: 1.1rem; }
   border-radius: var(--radius);
   text-decoration: none;
   color: inherit;
-  transition: background-color 150ms ease, box-shadow 150ms ease, border-color 150ms ease;
 }
 .post-card:hover {
   background: var(--secondary);
@@ -113,7 +112,7 @@ article { padding-bottom: 6rem; }
 .kicker a { color: inherit; text-decoration: none; }
 .kicker a:hover { color: var(--fg); }
 .post-header h1 { font-size: 2.25rem; margin: 0 0 0.5rem; line-height: 1.15; }
-.post-header .subtitle { font-style: italic; color: var(--muted); font-size: 1.1rem; margin: 0 0 1.25rem; line-height: 1.5; }
+.post-header .subtitle { color: var(--muted); font-size: 1.1rem; margin: 0 0 1.25rem; line-height: 1.5; }
 .post-header .date { color: var(--muted); font-size: 0.85rem; margin: 0; }
 
 .post-body p { margin: 1rem 0; line-height: 1.7; }
@@ -169,8 +168,15 @@ article { padding-bottom: 6rem; }
 
 /* Scroll progress on the seam: a dotted track between image and text, and a
    dot that rides down the viewport as you read through the section. Driven
-   by the section's own scroll timeline — pure CSS, no JavaScript. Browsers
-   without animation-timeline park the dot at the section top. */
+   by the section's own scroll timeline — pure CSS, no JavaScript.
+
+   The dot is position: fixed and animated with transform (not top), so the
+   browser keeps it glued to the scroll on the compositor instead of relaying
+   layout one frame behind — that lag is what made it judder. The art article
+   is full-bleed, so a viewport-relative seam x matches the absolute track
+   below. Outside the section's scroll range the dot is held at opacity 0, so
+   only the note you're reading shows one; browsers without animation-timeline
+   leave it hidden. */
 .has-art::before {
   content: "";
   position: absolute;
@@ -183,22 +189,32 @@ article { padding-bottom: 6rem; }
 }
 .has-art::after {
   content: "";
-  position: absolute;
+  position: fixed;
   left: calc(100% * 5 / 11);
   top: 0;
   width: 0.75rem;
   height: 0.75rem;
   border-radius: 50%;
   background: var(--fg);
-  transform: translateX(-50%);
+  opacity: 0;
   z-index: 1;
-  animation: dot-ride linear both;
-  animation-timeline: --section;
-  animation-range: contain;
 }
-@keyframes dot-ride {
-  from { top: 0; }
-  to { top: calc(100% - 0.75rem); }
+/* The ride is motion, so it sits behind the reduced-motion gate like
+   everything else: with reduced motion the dot stays at opacity 0 and
+   never appears, same as in browsers without animation-timeline. */
+@media (prefers-reduced-motion: no-preference) {
+  .has-art::after {
+    will-change: transform, opacity;
+    animation: dot-ride linear both;
+    animation-timeline: --section;
+    animation-range: contain;
+  }
+  @keyframes dot-ride {
+    0%   { opacity: 0; transform: translate(-50%, 0); }
+    10%  { opacity: 1; }
+    90%  { opacity: 1; }
+    100% { opacity: 0; transform: translate(-50%, calc(100dvh - 0.75rem)); }
+  }
 }
 .has-art .post-body, .panel { display: contents; }
 .has-art .post-header { grid-column: 2; grid-row: 1; margin-bottom: 0; }
@@ -239,31 +255,6 @@ article { padding-bottom: 6rem; }
   padding: 0 1.5rem;
 }
 
-/* Note stream: a Stream section's index renders the notes themselves,
-   end-to-end. Every second note mirrors — art right, text left — so the
-   scroll alternates like facing pages. Pure nth-of-type, no markup. */
-.stream .post-header h1 a { text-decoration: none; }
-.stream .post-header h1 a:hover { color: var(--muted); }
-.stream article + article { border-top: 1px solid var(--border); }
-.stream article.has-art { padding-bottom: 0; }
-.stream article:not(.has-art) {
-  max-width: var(--measure);
-  margin-left: auto;
-  margin-right: auto;
-  padding-left: 1.5rem;
-  padding-right: 1.5rem;
-}
-.stream article.has-art:nth-of-type(even) { grid-template-columns: 6fr 5fr; }
-.stream article.has-art:nth-of-type(even)::before,
-.stream article.has-art:nth-of-type(even)::after { left: calc(100% * 6 / 11); }
-.stream article:nth-of-type(even) .post-header { grid-column: 1; }
-.stream article:nth-of-type(even) .panel-art { grid-column: 2; }
-.stream article:nth-of-type(even) .panel-text {
-  grid-column: 1;
-  justify-self: end;
-  width: 100%;
-}
-
 @media (max-width: 768px) {
   .wrap-art { padding-left: 1.25rem; padding-right: 1.25rem; }
   .wrap-art .site-header, .wrap-art footer { padding-left: 0; padding-right: 0; }
@@ -294,23 +285,30 @@ footer p { margin: 0; }
   .post-header h1 { font-size: 1.75rem; }
 }
 
-/* Cross-document view transitions: browser holds the old page on screen
-   and cross-fades to the new one as it loads. Click-to-motion is instant.
-   Falls back gracefully to the @keyframes fade below in older browsers. */
-@view-transition { navigation: auto; }
+/* All motion lives behind prefers-reduced-motion: no-preference. With
+   reduced motion there are no transitions, no fades, no view-transition
+   cross-fades, no scroll-linked animation — pages simply render. */
 @media (prefers-reduced-motion: no-preference) {
+  /* Cross-document view transitions: the browser holds the old page on
+     screen and cross-fades to the new one as it loads. Click-to-motion is
+     instant. Browsers without view transitions fall through to the fade. */
+  @view-transition { navigation: auto; }
   ::view-transition-old(root),
   ::view-transition-new(root) {
     animation-duration: 200ms;
     animation-timing-function: ease-out;
   }
-}
 
-/* Page-load fade. Acts as the floor for browsers without view transitions. */
-@media (prefers-reduced-motion: no-preference) {
+  /* Page-load fade. The floor for browsers without view transitions. */
   @keyframes fade-in {
     from { opacity: 0; }
     to { opacity: 1; }
   }
   .wrap { animation: fade-in 220ms ease-out; }
+
+  /* Hover transitions. */
+  a { transition: color 150ms ease; }
+  .post-card {
+    transition: background-color 150ms ease, box-shadow 150ms ease, border-color 150ms ease;
+  }
 }

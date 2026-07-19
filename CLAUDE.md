@@ -17,7 +17,7 @@ measure, don't guess; don't soften the verdict.
 
 ## Quick map
 
-- `cmd/build/main.go` — the entire SSG, ~300 lines, one direct dep
+- `cmd/build/main.go` — the entire SSG, ~400 lines, one direct dep
   (goldmark).
 - `templates/` — HTML templates. Every page extends `base.html`
   (including `home.html`, the landing: intro + recent posts per
@@ -36,8 +36,7 @@ measure, don't guess; don't soften the verdict.
 - New post: drop `content/<section>/<slug>.md` with front matter.
 - New section: edit the `sections` slice in `cmd/build/main.go` and
   `mkdir content/<name>/`. The home page and nav pick it up
-  automatically. Set the section's `Stream` flag to render its index
-  as a continuous stream (like Notes) instead of a card list.
+  automatically.
 
 ## Voice when responding to feature requests
 

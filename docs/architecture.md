@@ -94,21 +94,20 @@ verify it mechanically.
 
 ### Output budget
 
-6. **Per-page weight target: under 30KB for inner pages.**
-   Inner pages (`/<section>/`, `/<section>/<slug>.html`,
-   `/about.html`) must each transfer under ~30KB total including
-   HTML, CSS, and font. The home page is exempted *only* because of
-   the wallpaper image; even then, total weight should stay under
-   ~250KB. Posts that include art (see "Art posts" below) are
-   exempted the same way the home page is: each image is one
+6. **Per-page weight target: under ~30KB for every page.**
+   Every page (`/`, `/<section>/`, `/<section>/<slug>.html`,
+   `/about.html`) must transfer under ~30KB total including HTML,
+   CSS, and font. Posts that include art (see "Art posts" below)
+   are exempted for their images only: each image is one
    hand-compressed file (webp / avif / jpg) under 200KB, and the
    page's budget excluding images still holds.
 
-7. **Total `dist/` size excluding wallpaper stays in the low
-   hundreds of KB for a small site.**
-   With ~20 posts, expect somewhere in the 100–200KB range. If it
-   crosses 500KB without a wallpaper, something has been added that
-   probably shouldn't have.
+7. **Total `dist/` size stays in the low hundreds of KB for a
+   small site.**
+   With ~20 posts, expect somewhere in the 100–200KB range, plus
+   whatever art images a handful of posts carry. If it crosses
+   500KB excluding art, something has been added that probably
+   shouldn't have.
 
 8. **Zero external network requests.**
    In devtools' network panel, every request must be same-origin.
@@ -118,9 +117,9 @@ verify it mechanically.
 
 9. **At most one CSS request, one font request, zero JS requests
    per page.**
-   Inner pages: 1 HTML + 1 CSS + 1 font + 0 JS + 0 third-party.
-   Home: same plus 1 wallpaper image. Art posts: same plus N
-   same-origin images, each within the 200KB budget above.
+   Every page: 1 HTML + 1 CSS + 1 font + 0 JS + 0 third-party.
+   Art posts: same plus N same-origin images, each within the
+   200KB budget above.
 
 10. **Zero JavaScript by default.**
     No `<script>` tag should appear in any rendered HTML unless it
@@ -155,7 +154,7 @@ verify it mechanically.
     channel for subscription.
 
 15. **No image CDN, no responsive `srcset` framework.**
-    Sized `<img>`. The wallpaper is one carefully-chosen,
+    Sized `<img>`. Every image is one carefully-chosen,
     appropriately-compressed file.
 
 ### Type and visual
@@ -177,7 +176,11 @@ verify it mechanically.
     No JS-driven animation libraries (Framer Motion, GSAP,
     Anime.js, Lottie, Three.js). Page transitions use the
     cross-document View Transitions API. Per-element fades use
-    `@keyframes`. All motion is gated on `prefers-reduced-motion`.
+    `@keyframes`. Scroll-linked motion uses CSS scroll-driven
+    animations (`view-timeline` / `animation-timeline`). All
+    motion — transitions, fades, view-transition cross-fades,
+    scroll-linked animation — is gated on
+    `prefers-reduced-motion`.
 
 ### Project layout
 
@@ -200,7 +203,7 @@ verify it mechanically.
 
 ### Static site generator
 
-Located at `cmd/build/main.go`. ~300 lines. One direct Go dependency:
+Located at `cmd/build/main.go`. ~400 lines. One direct Go dependency:
 `github.com/yuin/goldmark` for markdown → HTML.
 
 The pipeline is unforgivingly simple. The `main()` function:
@@ -208,34 +211,29 @@ The pipeline is unforgivingly simple. The `main()` function:
 1. **Discovers** all posts by walking each `content/<section>/`
    directory, parsing the `---`-delimited YAML-ish front matter
    (title, date, summary), and converting the markdown body to HTML.
-2. **Renders** the home page as a standalone HTML document; renders
-   each section's index, RSS feed, and posts; renders the combined
-   feed and the about page.
+2. **Renders** the home page, each section's index, RSS feed, and
+   posts, the combined feed, and the about page.
 3. **Writes** every output to `dist/`.
 
-The home page bypasses `templates/base.html` and is rendered as a
-self-contained document via a small `renderStandalone()` helper.
-Every other page extends `base.html` via Go template inheritance
-(`{{define "content"}}` / `{{template "base"}}`). This is by design:
-the home page is a "desktop"; it has no nav, no footer, no `.wrap`
-container, and no business pretending to share a chrome with the
-inner pages.
+Every page extends `templates/base.html` via Go template inheritance
+(`{{define "content"}}` / `{{template "base"}}`) — including the home
+page. There is one shared chrome (brand link, section nav, footer)
+and no special-cased documents.
 
 ### Sections
 
 A section is a directory under `content/`. The list of sections is
 declared once, at the top of `cmd/build/main.go`, in a `[]Section`
 slice. Adding a section means: create the directory, add a struct
-literal to the slice, drop in markdown files, add an SVG icon block
-to `templates/home.html`. There is no plugin to install, no config
-file to edit, no theme to extend.
+literal to the slice, drop in markdown files. The home page and the
+nav pick it up automatically. There is no plugin to install, no
+config file to edit, no theme to extend.
 
 The current sections are `thoughts`, `notes`, `projects`, `reading`,
-plus `about` (a single page rather than a section, but exposed as an
-icon on the desktop). These names are not sacred; they are the
-current choice. Renaming requires updating the `Section` slice,
-renaming the content directory, and editing the matching icon block
-in `home.html`.
+plus `about` (a single page rather than a section, linked from the
+nav). These names are not sacred; they are the current choice.
+Renaming requires updating the `Section` slice and renaming the
+content directory.
 
 ### Content
 
@@ -264,15 +262,10 @@ permanent contract on every future post.
 
 A built page is composed of:
 
-- One HTML file (1–3KB).
-- One shared CSS file at `/static/style.css` (~8KB).
+- One HTML file (1–5KB).
+- One shared CSS file at `/static/style.css` (~11KB).
 - One font file (`plex-regular.woff2`, ~15KB), preloaded via
   `<link rel="preload">`.
-- (Home only.) One wallpaper image (target ≤200KB) and an inline
-  `<style>` block setting it as the body's `background-image`.
-- (Home only.) Five inlined SVG icons (~5KB combined).
-- (Home only.) Five `<link rel="prefetch">` tags so subsequent
-  navigation has no network round-trip.
 - (Art posts only.) N self-hosted images from `static/art/<slug>/`,
   each one hand-compressed file under 200KB.
 
@@ -282,17 +275,16 @@ That is the whole network footprint. Nothing else loads.
 
 Plain `<a href>` to plain `.html` files. No client-side router.
 
-- `/` — desktop landing.
+- `/` — the landing: a short intro plus the most recent posts from
+  each section.
 - `/<section>/` — chronological index for the section.
 - `/<section>/<slug>.html` — one file per post.
 - `/<section>/feed.xml` — RSS feed for the section.
 - `/feed.xml` — combined RSS feed across all sections.
 - `/about.html` — about page.
 
-Inner pages use a shared `site-header` with the brand link and
-section nav. The brand link points to `/`, which is the desktop. The
-desktop itself has no header, no footer, no chrome — its icons are
-the navigation.
+Every page uses the shared `site-header` with the brand link and
+section nav. The brand link points to `/`.
 
 ### Hosting
 
@@ -302,47 +294,11 @@ ordinary static host. There is no serverless function, no edge
 runtime, no ISR/SSR/RSC distinction, no build-time webhook, no
 deploy preview daemon. Push the folder; that is the deploy.
 
----
-
-## Desktop landing
-
-The home page (`/`) is a "desktop" metaphor. The viewport is filled
-by a static wallpaper image; section icons sit in a column at the
-top-left, each one a labelled SVG inside an `<a>` to its section.
-Clicking an icon navigates to the section index. The brand link in
-inner-page chrome navigates back to the desktop.
-
-The desktop is intentionally austere: no header, no footer, no
-recent-posts panel, no clock, no dock, no greeting. The icons *are*
-the navigation. This is a deliberate choice. Any temptation to add a
-greeting, a name, a current date, a list of recent posts, or any
-chrome should be measured against the principle "the icons are the
-navigation; everything else is decoration."
-
-The desktop has two performance affordances that are easy to overlook:
-
-- **`@view-transition { navigation: auto }`** in `static/style.css`.
-  Modern browsers (Chrome/Edge 126+, Safari 18+) snapshot the current
-  page on click and cross-fade to the new one as it loads. The
-  perceived navigation is instantaneous because the old page stays
-  on screen during the network round-trip.
-
-- **`<link rel="prefetch">`** for each section in the desktop's
-  `<head>`. The browser idle-fetches the targets, so the
-  click-to-render path avoids the network entirely on second use.
-
-For browsers without View Transitions, a CSS `@keyframes` fade is
-the floor. The desktop icons stagger in over ~250ms; inner pages
-fade their `.wrap` over ~220ms. All animations are gated on
-`prefers-reduced-motion: no-preference`.
-
-The wallpaper is opt-in. If `static/wallpaper.<ext>` exists at build
-time (where `<ext>` is one of `webp`, `avif`, `jpg`, `jpeg`, `png`),
-the SSG injects an inline `<style>` block on the home page that sets
-it as the body's background-image. If no wallpaper file is present,
-the body falls back to the solid background colour from the CSS
-variables. There is no broken-image icon, no 404, no console error
-in either case.
+For hosts that serve the site from a sub-path (GitHub Pages project
+sites), set `BLOG_BASE_PATH` at build time and every root-absolute
+URL is prefixed with it. The deploy workflow in
+`.github/workflows/` does this. It is a build-time string prefix,
+not runtime configuration.
 
 ---
 
@@ -360,6 +316,12 @@ plus the text that follows it into a `<section class="panel">`;
 IntersectionObserver, no scroll listener, no scrollytelling library.
 If a future change to this feature requires a `<script>` tag, the
 change is wrong.
+
+A dotted track runs down the image/text seam, with a dot that rides
+the article's own scroll timeline as you read — CSS scroll-driven
+animation, no JavaScript. Like all motion on the site it is gated on
+`prefers-reduced-motion`, and browsers without `animation-timeline`
+never show it at all.
 
 Authoring rules:
 
@@ -492,10 +454,9 @@ checklist when auditing.
 
 - [ ] `time make build` (after compilation) takes more than 100ms
   for the SSG run itself.
-- [ ] An inner page transfer size exceeds 30KB (excluding art-post
+- [ ] Any page's transfer size exceeds 30KB (excluding art-post
   images that individually respect the 200KB budget).
 - [ ] An image under `static/art/` exceeds 200KB.
-- [ ] The home page transfer size exceeds 250KB.
 - [ ] The CSS file exceeds ~12KB.
 - [ ] More than one font file is downloaded per page.
 - [ ] Any third-party network request appears in devtools.
